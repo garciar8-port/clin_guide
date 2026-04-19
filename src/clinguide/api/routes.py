@@ -4,6 +4,7 @@ import logging
 
 from fastapi import APIRouter
 
+from clinguide.api.conversation import SessionStore
 from clinguide.core.config import settings
 from clinguide.core.models import QueryRequest, QueryResponse
 from clinguide.core.tracing import new_trace
@@ -31,6 +32,7 @@ _classifier: QueryClassifier | None = None
 _generator: Generator | None = None
 _grounding: GroundingChecker | None = None
 _expander: QueryExpander | None = None
+_sessions: SessionStore | None = None
 
 ABSTAIN_RESPONSE = (
     "I don't have enough information in the available drug labels to answer this."
@@ -102,6 +104,13 @@ def _get_expander() -> QueryExpander:
     return _expander
 
 
+def _get_sessions() -> SessionStore:
+    global _sessions
+    if _sessions is None:
+        _sessions = SessionStore()
+    return _sessions
+
+
 @router.get("/health")
 async def health() -> dict[str, str]:
     return {"status": "ok"}
@@ -110,6 +119,16 @@ async def health() -> dict[str, str]:
 @router.post("/query", response_model=QueryResponse)
 async def query(req: QueryRequest) -> QueryResponse:
     trace = new_trace(query=req.q)
+
+    # Multi-turn: enrich query with conversation context
+    effective_query = req.q
+    session = None
+    if req.session_id:
+        session = _get_sessions().get_or_create(req.session_id)
+        if session.messages:
+            effective_query = session.format_contextual_query(req.q)
+            trace.start_span("multi_turn", turns=len(session.messages))
+            trace.end_span(enriched=True)
 
     # 1. Classify query
     trace.start_span("classify_query")
@@ -121,10 +140,10 @@ async def query(req: QueryRequest) -> QueryResponse:
     if classification == "unsafe":
         return _abstain_response("unsafe", trace)
 
-    # 2. Query expansion
+    # 2. Query expansion (use effective_query for multi-turn context)
     trace.start_span("expand_query")
-    expanded_q = _get_expander().expand(req.q)
-    trace.end_span(original=req.q, expanded=expanded_q)
+    expanded_q = _get_expander().expand(effective_query)
+    trace.end_span(original=effective_query, expanded=expanded_q)
 
     # 3. Hybrid retrieval (vector + BM25 + RRF)
     trace.start_span("hybrid_retrieval", top_k=settings.retrieval_top_k)
@@ -187,6 +206,11 @@ async def query(req: QueryRequest) -> QueryResponse:
         reranker_top_score=reranked[0].score,
         grounding=grounding,
     )
+
+    # Save to conversation history
+    if session:
+        session.add_user_message(req.q)
+        session.add_assistant_message(response.answer)
 
     logger.info("trace=%s %s", trace.trace_id, trace.to_dict())
     return response

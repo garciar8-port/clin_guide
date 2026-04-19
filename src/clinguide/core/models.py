@@ -63,6 +63,7 @@ SECTION_CODES: dict[str, str] = {
 class QueryRequest(BaseModel):
     q: str
     filters: dict[str, str] | None = None
+    session_id: str | None = None  # For multi-turn conversation
 
 
 class Citation(BaseModel):

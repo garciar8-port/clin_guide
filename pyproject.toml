@@ -25,11 +25,16 @@ dependencies = [
     "pydantic-settings>=2.7.0",
     # Tokenizer (chunk size estimation)
     "tiktoken>=0.8.0",
+    # PDF parsing (CDC/NIH guidelines)
+    "pymupdf>=1.25.0",
 ]
 
 [project.optional-dependencies]
 ui = [
     "streamlit>=1.40.0",
+]
+local-reranker = [
+    "sentence-transformers>=3.4.0",
 ]
 dev = [
     "pytest>=8.3.0",
