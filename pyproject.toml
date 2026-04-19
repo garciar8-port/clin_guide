@@ -55,6 +55,9 @@ select = ["E", "F", "I", "N", "UP", "B", "SIM", "RUF"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
+markers = [
+    "smoke: end-to-end smoke tests requiring API keys and populated index",
+]
 
 [tool.mypy]
 python_version = "3.12"

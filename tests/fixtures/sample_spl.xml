@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<document xmlns="urn:hl7-org:v3">
+  <id root="test-doc-id"/>
+  <setId root="test-set-001"/>
+  <versionNumber value="3"/>
+  <title>TESTDRUG (testgeneric) tablets, for oral use</title>
+  <component>
+    <structuredBody>
+      <component>
+        <section ID="s1">
+          <id root="section-1"/>
+          <code code="34067-9" codeSystem="2.16.840.1.113883.6.1" displayName="INDICATIONS &amp; USAGE"/>
+          <title>1 INDICATIONS AND USAGE</title>
+          <text>
+            <paragraph>TESTDRUG is indicated for the treatment of adult patients with metastatic non-small cell lung cancer (NSCLC) whose tumors have epidermal growth factor receptor (EGFR) exon 19 deletions or exon 21 L858R mutations.</paragraph>
+            <paragraph>TESTDRUG is also indicated as adjuvant therapy after tumor resection in patients with NSCLC whose tumors have EGFR exon 19 deletions or exon 21 L858R mutations.</paragraph>
+          </text>
+        </section>
+      </component>
+      <component>
+        <section ID="s2">
+          <id root="section-2"/>
+          <code code="34068-7" codeSystem="2.16.840.1.113883.6.1" displayName="DOSAGE &amp; ADMINISTRATION"/>
+          <title>2 DOSAGE AND ADMINISTRATION</title>
+          <text>
+            <paragraph>The recommended dosage of TESTDRUG is 80 mg taken orally once daily, with or without food, until disease progression or unacceptable toxicity.</paragraph>
+            <table ID="t1" width="100%">
+              <caption>Table 1. Recommended Dose Modifications for Adverse Reactions</caption>
+              <thead>
+                <tr>
+                  <th>Adverse Reaction</th>
+                  <th>Dose Modification</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>QTc interval greater than 500 msec</td>
+                  <td>Withhold until QTc is less than 481 msec, then resume at 40 mg</td>
+                </tr>
+                <tr>
+                  <td>Interstitial lung disease</td>
+                  <td>Permanently discontinue</td>
+                </tr>
+              </tbody>
+            </table>
+          </text>
+        </section>
+      </component>
+      <component>
+        <section ID="s3">
+          <id root="section-3"/>
+          <code code="34070-3" codeSystem="2.16.840.1.113883.6.1" displayName="CONTRAINDICATIONS"/>
+          <title>4 CONTRAINDICATIONS</title>
+          <text>
+            <paragraph>None.</paragraph>
+          </text>
+        </section>
+      </component>
+      <component>
+        <section ID="s4">
+          <id root="section-4"/>
+          <code code="34074-5" codeSystem="2.16.840.1.113883.6.1" displayName="DRUG INTERACTIONS"/>
+          <title>7 DRUG INTERACTIONS</title>
+          <text>
+            <paragraph>Strong CYP3A4 inhibitors: Avoid concomitant use. If unavoidable, reduce TESTDRUG dose to 40 mg once daily.</paragraph>
+            <paragraph>Strong CYP3A4 inducers: Avoid concomitant use with strong CYP3A4 inducers.</paragraph>
+          </text>
+        </section>
+      </component>
+      <component>
+        <section ID="s-product">
+          <id root="section-product"/>
+          <code code="48780-1" codeSystem="2.16.840.1.113883.6.1" displayName="PRODUCT"/>
+          <subject>
+            <manufacturedProduct>
+              <manufacturedProduct>
+                <name>TESTDRUG</name>
+                <asEntityWithGeneric>
+                  <genericMedicine>
+                    <name>testgeneric</name>
+                  </genericMedicine>
+                </asEntityWithGeneric>
+              </manufacturedProduct>
+            </manufacturedProduct>
+          </subject>
+        </section>
+      </component>
+    </structuredBody>
+  </component>
+</document>
