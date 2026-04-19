@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from clinguide.api.routes import router
+from clinguide.api.streaming import stream_router
 
 
 @asynccontextmanager
@@ -31,6 +32,7 @@ def create_app() -> FastAPI:
     )
 
     app.include_router(router)
+    app.include_router(stream_router)
     return app
 
 

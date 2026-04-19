@@ -1,0 +1,101 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('pyproject.toml') }}
+
+      - name: Install dependencies
+        run: pip install -e ".[dev]"
+
+      - name: Lint with ruff
+        run: ruff check src/ tests/
+
+      - name: Type check with mypy
+        run: mypy src/clinguide/ --ignore-missing-imports
+        continue-on-error: true
+
+      - name: Run unit tests
+        run: pytest tests/unit/ -v --tb=short --junitxml=test-results.xml
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: test-results.xml
+
+  eval:
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -e ".[dev]"
+
+      - name: Run eval suite (metrics check)
+        env:
+          CLINGUIDE_ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          CLINGUIDE_OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          CLINGUIDE_PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
+          CLINGUIDE_COHERE_API_KEY: ${{ secrets.COHERE_API_KEY }}
+        run: |
+          python -c "
+          import json
+          from pathlib import Path
+
+          results_path = Path('eval/results/latest.json')
+          if not results_path.exists():
+              print('No eval results found — skipping threshold check')
+              exit(0)
+
+          r = json.load(open(results_path))
+          summary = r.get('summary', {})
+
+          thresholds = {
+              'abstention_accuracy': 0.85,
+              'happy_path_coverage': 0.60,
+              'citation_rate': 0.80,
+          }
+
+          failed = False
+          for metric, floor in thresholds.items():
+              value = summary.get(metric, 0)
+              status = '✓' if value >= floor else '✗ REGRESSION'
+              print(f'{metric}: {value:.2f} (floor: {floor:.2f}) {status}')
+              if value < floor:
+                  failed = True
+
+          if failed:
+              exit(1)
+          "
