@@ -2,7 +2,7 @@
 
 import logging
 
-from clinguide.core.models import LabelDocument, LabelSection, Chunk
+from clinguide.core.models import Chunk, LabelDocument
 from clinguide.ingestion.chunker import chunk_label, count_tokens
 
 logger = logging.getLogger("clinguide.eval.chunking")

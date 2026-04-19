@@ -3,7 +3,7 @@
 import logging
 import time
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 logger = logging.getLogger("clinguide.trace")
 
@@ -34,7 +34,7 @@ class QueryTrace:
         if not self.trace_id:
             self.trace_id = f"t-{int(time.time() * 1000)}"
         if not self.created_at:
-            self.created_at = datetime.now(timezone.utc).isoformat()
+            self.created_at = datetime.now(UTC).isoformat()
 
     def start_span(self, name: str, **attributes) -> None:
         self._current_span = SpanRecord(

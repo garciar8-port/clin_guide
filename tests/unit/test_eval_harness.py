@@ -1,14 +1,14 @@
 """Tests for the evaluation harness metrics."""
 
 from clinguide.eval.harness import (
+    EvalReport,
+    abstention_correct,
+    answer_contains,
+    classify_failure,
+    load_cases,
+    mrr,
     precision_at_k,
     recall_at_k,
-    mrr,
-    answer_contains,
-    abstention_correct,
-    classify_failure,
-    EvalReport,
-    load_cases,
 )
 
 
@@ -73,7 +73,11 @@ class TestAbstention:
 
 class TestFailureClassification:
     def test_no_failure(self):
-        response = {"answer": "80 mg once daily", "citations": [{"marker": "[^1]"}], "abstained": False}
+        response = {
+            "answer": "80 mg once daily",
+            "citations": [{"marker": "[^1]"}],
+            "abstained": False,
+        }
         case = {"expected_answer_contains": ["80 mg"], "id": "hp_001"}
         assert classify_failure(response, case) is None
 

@@ -70,7 +70,8 @@ async def test_seed_query(async_client, seed):
     # If not abstaining, should have citations and a disclaimer
     if not data.get("abstained"):
         assert len(data["citations"]) > 0, f"No citations for: {seed['query']}"
-        assert "drug label" in data["disclaimer"].lower() or "informational" in data["disclaimer"].lower()
+        disc = data["disclaimer"].lower()
+        assert "drug label" in disc or "informational" in disc
 
         # Check expected terms appear in answer
         for term in seed["expect_in_answer"]:

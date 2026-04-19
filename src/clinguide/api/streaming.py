@@ -4,20 +4,19 @@ import json
 import logging
 from collections.abc import AsyncGenerator
 
+from anthropic import AsyncAnthropic
 from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
 
 from clinguide.core.config import settings
 from clinguide.core.models import QueryRequest
 from clinguide.generation.classifier import QueryClassifier
+from clinguide.retrieval.bm25_search import BM25Index
 from clinguide.retrieval.embedder import Embedder
 from clinguide.retrieval.hybrid import HybridRetriever
-from clinguide.retrieval.bm25_search import BM25Index
 from clinguide.retrieval.query_expansion import QueryExpander
 from clinguide.retrieval.reranker import CohereReranker
 from clinguide.retrieval.vector_search import VectorRetriever
-
-from anthropic import AsyncAnthropic
 
 logger = logging.getLogger("clinguide.api.streaming")
 
@@ -62,7 +61,8 @@ async def _stream_generate(
             yield _sse_event("token", {"text": text})
 
     # Signal completion
-    yield _sse_event("done", {"disclaimer": "Not for clinical use. Verify against current prescribing information."})
+    disclaimer = "Not for clinical use. Verify against current prescribing information."
+    yield _sse_event("done", {"disclaimer": disclaimer})
 
 
 def _sse_event(event: str, data: dict) -> str:

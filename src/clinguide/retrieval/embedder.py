@@ -1,6 +1,5 @@
 """Embedding generation and Pinecone upsert."""
 
-import asyncio
 
 from openai import AsyncOpenAI
 from pinecone import Pinecone, ServerlessSpec
@@ -64,7 +63,7 @@ class Embedder:
         index = self._get_index()
 
         vectors = []
-        for chunk, embedding in zip(chunks, embeddings):
+        for chunk, embedding in zip(chunks, embeddings, strict=True):
             metadata = {
                 "drug_name": chunk.drug_name,
                 "drug_generic": chunk.drug_generic,

@@ -3,8 +3,8 @@
 import logging
 
 from clinguide.core.config import settings
-from clinguide.retrieval.vector_search import RetrievalHit, VectorRetriever
 from clinguide.retrieval.bm25_search import BM25Index
+from clinguide.retrieval.vector_search import RetrievalHit, VectorRetriever
 
 logger = logging.getLogger("clinguide.retrieval.hybrid")
 

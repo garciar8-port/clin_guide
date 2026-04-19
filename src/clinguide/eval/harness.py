@@ -162,7 +162,10 @@ class EvalReport:
                 sum(1 for r in adversarial if r["abstention_correct"]) / len(adversarial)
                 if adversarial else 0.0
             ),
-            "citation_rate": sum(1 for r in happy if r["has_citations"]) / len(happy) if happy else 0.0,
+            "citation_rate": (
+                sum(1 for r in happy if r["has_citations"]) / len(happy)
+                if happy else 0.0
+            ),
             "failure_modes": failures,
         }
 

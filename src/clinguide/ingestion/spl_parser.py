@@ -2,7 +2,7 @@
 
 from lxml import etree
 
-from clinguide.core.models import LabelDocument, LabelSection, TableExtract, SECTION_CODES
+from clinguide.core.models import SECTION_CODES, LabelDocument, LabelSection, TableExtract
 
 NS = {"hl7": "urn:hl7-org:v3"}
 
@@ -108,7 +108,7 @@ def _collect_text_content(el: etree._Element, parts: list[str]) -> None:
 
 
 def _element_full_text(el: etree._Element) -> str:
-    """Get all text content from an element, including text in child elements like <sup>, <sub>, <content>."""
+    """Get all text content, including child elements like <sup>, <sub>."""
     return "".join(el.itertext())
 
 

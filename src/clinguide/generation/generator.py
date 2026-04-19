@@ -1,7 +1,7 @@
 """Claude-powered answer generation with inline citations."""
 
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from anthropic import AsyncAnthropic
 
@@ -97,7 +97,7 @@ class Generator:
                 citations=[],
                 confidence=0.5,
                 disclaimer=DISCLAIMER_TEMPLATE.format(
-                    retrieved_at=datetime.now(timezone.utc).isoformat()
+                    retrieved_at=datetime.now(UTC).isoformat()
                 ),
             )
 
@@ -115,7 +115,7 @@ class Generator:
             citations=citations,
             confidence=data.get("confidence", 0.5),
             disclaimer=DISCLAIMER_TEMPLATE.format(
-                retrieved_at=datetime.now(timezone.utc).isoformat()
+                retrieved_at=datetime.now(UTC).isoformat()
             ),
         )
 
@@ -125,7 +125,7 @@ class Generator:
             citations=[],
             confidence=0.0,
             disclaimer=DISCLAIMER_TEMPLATE.format(
-                retrieved_at=datetime.now(timezone.utc).isoformat()
+                retrieved_at=datetime.now(UTC).isoformat()
             ),
             abstained=True,
             abstain_reason=reason,

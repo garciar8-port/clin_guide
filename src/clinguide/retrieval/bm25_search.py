@@ -36,7 +36,7 @@ class BM25Index:
 
         # Pair scores with chunks, sort descending
         scored = sorted(
-            zip(scores, self._chunks),
+            zip(scores, self._chunks, strict=False),
             key=lambda x: x[0],
             reverse=True,
         )

@@ -125,7 +125,8 @@ class GroundingChecker:
                 f"Source passage:\n{source}\n\n"
                 f"Claim to verify:\n{claim}\n\n"
                 "Is this claim ENTAILED by the source passage? "
-                "Respond with JSON: [{\"claim\": \"...\", \"verdict\": \"entailed\"|\"not_entailed\", \"reason\": \"...\"}]"
+                'Respond with JSON: [{"claim": "...", '
+                '"verdict": "entailed"|"not_entailed", "reason": "..."}]'
             )
 
             response = await self._client.messages.create(

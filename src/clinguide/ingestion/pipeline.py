@@ -3,9 +3,9 @@
 import asyncio
 import logging
 
+from clinguide.ingestion.chunker import chunk_label
 from clinguide.ingestion.dailymed_client import DailyMedClient
 from clinguide.ingestion.spl_parser import parse_spl
-from clinguide.ingestion.chunker import chunk_label
 from clinguide.ingestion.synonyms import SynonymDictionary
 from clinguide.retrieval.embedder import Embedder
 
