@@ -1,0 +1,45 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: ClinGuide — S3 bucket for raw SPL label data
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues: [dev, prod]
+
+Resources:
+  SPLBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub clinguide-spl-data-${AWS::AccountId}-${Environment}
+      VersioningConfiguration:
+        Status: Enabled
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      LifecycleConfiguration:
+        Rules:
+          - Id: TransitionToIA
+            Status: Enabled
+            Transitions:
+              - StorageClass: STANDARD_IA
+                TransitionInDays: 90
+      Tags:
+        - Key: Project
+          Value: clinguide
+
+Outputs:
+  BucketName:
+    Value: !Ref SPLBucket
+    Export:
+      Name: !Sub clinguide-${Environment}-SPLBucketName
+  BucketArn:
+    Value: !GetAtt SPLBucket.Arn
+    Export:
+      Name: !Sub clinguide-${Environment}-SPLBucketArn

@@ -1,0 +1,13 @@
+aws_region  = "us-east-1"
+environment = "dev"
+image_tag   = "latest"
+
+# Fargate task sizing
+api_cpu    = 512
+api_memory = 1024
+ui_cpu     = 256
+ui_memory  = 512
+
+# Desired task count
+api_desired_count = 1
+ui_desired_count  = 1

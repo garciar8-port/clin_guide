@@ -36,6 +36,13 @@ htmlcov/
 data/raw/
 data/embeddings/
 
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+
 # OS
 .DS_Store
 Thumbs.db

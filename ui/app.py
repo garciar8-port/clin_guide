@@ -1,9 +1,11 @@
 """ClinGuide — Streamlit source-viewer UI."""
 
+import os
+
 import httpx
 import streamlit as st
 
-API_BASE = "http://localhost:8000"
+API_BASE = os.environ.get("CLINGUIDE_API_URL", "http://localhost:8000")
 
 # --- Demo data for mock mode ---
 DEMO_RESPONSES = {

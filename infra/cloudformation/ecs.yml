@@ -1,0 +1,331 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: ClinGuide — ECS cluster, ALB, task definitions, and services
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues: [dev, prod]
+  ImageTag:
+    Type: String
+    Default: latest
+    Description: Docker image tag to deploy
+  APICpu:
+    Type: Number
+    Default: 512
+  APIMemory:
+    Type: Number
+    Default: 1024
+  UICpu:
+    Type: Number
+    Default: 256
+  UIMemory:
+    Type: Number
+    Default: 512
+
+Resources:
+  # --- ECS Cluster ---
+  Cluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName: !Sub clinguide-${Environment}
+      ClusterSettings:
+        - Name: containerInsights
+          Value: enabled
+      CapacityProviders:
+        - FARGATE
+      DefaultCapacityProviderStrategy:
+        - CapacityProvider: FARGATE
+          Weight: 1
+
+  # --- CloudWatch Log Group ---
+  LogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /ecs/clinguide-${Environment}
+      RetentionInDays: 30
+
+  # --- ALB ---
+  LoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: !Sub clinguide-${Environment}-alb
+      Scheme: internet-facing
+      Type: application
+      SecurityGroups:
+        - !ImportValue
+          Fn::Sub: clinguide-${Environment}-ALBSecurityGroup
+      Subnets:
+        - !ImportValue
+          Fn::Sub: clinguide-${Environment}-PublicSubnetA
+        - !ImportValue
+          Fn::Sub: clinguide-${Environment}-PublicSubnetB
+      Tags:
+        - Key: Project
+          Value: clinguide
+
+  # --- Target Groups ---
+  APITargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: !Sub clinguide-${Environment}-api
+      Port: 8000
+      Protocol: HTTP
+      VpcId: !ImportValue
+        Fn::Sub: clinguide-${Environment}-VpcId
+      TargetType: ip
+      HealthCheckPath: /health
+      HealthCheckIntervalSeconds: 30
+      HealthCheckTimeoutSeconds: 10
+      HealthyThresholdCount: 2
+      UnhealthyThresholdCount: 3
+
+  UITargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: !Sub clinguide-${Environment}-ui
+      Port: 8501
+      Protocol: HTTP
+      VpcId: !ImportValue
+        Fn::Sub: clinguide-${Environment}-VpcId
+      TargetType: ip
+      HealthCheckPath: /_stcore/health
+      HealthCheckIntervalSeconds: 30
+      HealthCheckTimeoutSeconds: 10
+      HealthyThresholdCount: 2
+      UnhealthyThresholdCount: 3
+
+  # --- ALB Listener ---
+  HTTPListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref LoadBalancer
+      Port: 80
+      Protocol: HTTP
+      DefaultAction:
+        - Type: forward
+          TargetGroupArn: !Ref UITargetGroup
+
+  APIListenerRule:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Properties:
+      ListenerArn: !Ref HTTPListener
+      Priority: 10
+      Conditions:
+        - Field: path-pattern
+          PathPatternConfig:
+            Values:
+              - /query
+              - /query/*
+              - /health
+              - /chunks/*
+              - /docs
+              - /openapi.json
+      Actions:
+        - Type: forward
+          TargetGroupArn: !Ref APITargetGroup
+
+  # --- Cloud Map (Service Discovery) ---
+  ServiceDiscoveryNamespace:
+    Type: AWS::ServiceDiscovery::PrivateDnsNamespace
+    Properties:
+      Name: !Sub clinguide-${Environment}.internal
+      Vpc: !ImportValue
+        Fn::Sub: clinguide-${Environment}-VpcId
+
+  APIServiceDiscovery:
+    Type: AWS::ServiceDiscovery::Service
+    Properties:
+      Name: api
+      NamespaceId: !Ref ServiceDiscoveryNamespace
+      DnsConfig:
+        DnsRecords:
+          - Type: A
+            TTL: 10
+      HealthCheckCustomConfig:
+        FailureThreshold: 1
+
+  # --- API Task Definition ---
+  APITaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: !Sub clinguide-${Environment}-api
+      NetworkMode: awsvpc
+      RequiresCompatibilities: [FARGATE]
+      Cpu: !Ref APICpu
+      Memory: !Ref APIMemory
+      ExecutionRoleArn: !ImportValue
+        Fn::Sub: clinguide-${Environment}-TaskExecutionRoleArn
+      TaskRoleArn: !ImportValue
+        Fn::Sub: clinguide-${Environment}-TaskRoleArn
+      ContainerDefinitions:
+        - Name: api
+          Image: !Sub
+            - "${ECRUri}:${ImageTag}"
+            - ECRUri: !ImportValue
+                Fn::Sub: clinguide-${Environment}-ECRUri
+          Essential: true
+          PortMappings:
+            - ContainerPort: 8000
+              Protocol: tcp
+          Command:
+            - uvicorn
+            - clinguide.api.app:app
+            - --host
+            - "0.0.0.0"
+            - --port
+            - "8000"
+          Secrets:
+            - Name: CLINGUIDE_ANTHROPIC_API_KEY
+              ValueFrom: !Sub
+                - "${SecretArn}:CLINGUIDE_ANTHROPIC_API_KEY::"
+                - SecretArn: !ImportValue
+                    Fn::Sub: clinguide-${Environment}-SecretArn
+            - Name: CLINGUIDE_OPENAI_API_KEY
+              ValueFrom: !Sub
+                - "${SecretArn}:CLINGUIDE_OPENAI_API_KEY::"
+                - SecretArn: !ImportValue
+                    Fn::Sub: clinguide-${Environment}-SecretArn
+            - Name: CLINGUIDE_COHERE_API_KEY
+              ValueFrom: !Sub
+                - "${SecretArn}:CLINGUIDE_COHERE_API_KEY::"
+                - SecretArn: !ImportValue
+                    Fn::Sub: clinguide-${Environment}-SecretArn
+            - Name: CLINGUIDE_PINECONE_API_KEY
+              ValueFrom: !Sub
+                - "${SecretArn}:CLINGUIDE_PINECONE_API_KEY::"
+                - SecretArn: !ImportValue
+                    Fn::Sub: clinguide-${Environment}-SecretArn
+          Environment:
+            - Name: CLINGUIDE_HOST
+              Value: "0.0.0.0"
+            - Name: CLINGUIDE_PORT
+              Value: "8000"
+            - Name: CLINGUIDE_DEBUG
+              Value: "false"
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref LogGroup
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: api
+          HealthCheck:
+            Command: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
+            Interval: 30
+            Timeout: 5
+            Retries: 3
+            StartPeriod: 60
+
+  # --- UI Task Definition ---
+  UITaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: !Sub clinguide-${Environment}-ui
+      NetworkMode: awsvpc
+      RequiresCompatibilities: [FARGATE]
+      Cpu: !Ref UICpu
+      Memory: !Ref UIMemory
+      ExecutionRoleArn: !ImportValue
+        Fn::Sub: clinguide-${Environment}-TaskExecutionRoleArn
+      TaskRoleArn: !ImportValue
+        Fn::Sub: clinguide-${Environment}-TaskRoleArn
+      ContainerDefinitions:
+        - Name: ui
+          Image: !Sub
+            - "${ECRUri}:${ImageTag}"
+            - ECRUri: !ImportValue
+                Fn::Sub: clinguide-${Environment}-ECRUri
+          Essential: true
+          PortMappings:
+            - ContainerPort: 8501
+              Protocol: tcp
+          Command:
+            - streamlit
+            - run
+            - ui/app.py
+            - --server.port
+            - "8501"
+            - --server.address
+            - "0.0.0.0"
+          Environment:
+            - Name: CLINGUIDE_API_URL
+              Value: !Sub http://api.clinguide-${Environment}.internal:8000
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref LogGroup
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: ui
+
+  # --- API ECS Service ---
+  APIService:
+    Type: AWS::ECS::Service
+    DependsOn: APIListenerRule
+    Properties:
+      ServiceName: !Sub clinguide-${Environment}-api
+      Cluster: !Ref Cluster
+      TaskDefinition: !Ref APITaskDefinition
+      DesiredCount: 1
+      LaunchType: FARGATE
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: DISABLED
+          SecurityGroups:
+            - !ImportValue
+              Fn::Sub: clinguide-${Environment}-ECSSecurityGroup
+          Subnets:
+            - !ImportValue
+              Fn::Sub: clinguide-${Environment}-PrivateSubnetA
+            - !ImportValue
+              Fn::Sub: clinguide-${Environment}-PrivateSubnetB
+      LoadBalancers:
+        - ContainerName: api
+          ContainerPort: 8000
+          TargetGroupArn: !Ref APITargetGroup
+      ServiceRegistries:
+        - RegistryArn: !GetAtt APIServiceDiscovery.Arn
+      DeploymentConfiguration:
+        MinimumHealthyPercent: 100
+        MaximumPercent: 200
+
+  # --- UI ECS Service ---
+  UIService:
+    Type: AWS::ECS::Service
+    DependsOn: HTTPListener
+    Properties:
+      ServiceName: !Sub clinguide-${Environment}-ui
+      Cluster: !Ref Cluster
+      TaskDefinition: !Ref UITaskDefinition
+      DesiredCount: 1
+      LaunchType: FARGATE
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: DISABLED
+          SecurityGroups:
+            - !ImportValue
+              Fn::Sub: clinguide-${Environment}-ECSSecurityGroup
+          Subnets:
+            - !ImportValue
+              Fn::Sub: clinguide-${Environment}-PrivateSubnetA
+            - !ImportValue
+              Fn::Sub: clinguide-${Environment}-PrivateSubnetB
+      LoadBalancers:
+        - ContainerName: ui
+          ContainerPort: 8501
+          TargetGroupArn: !Ref UITargetGroup
+      DeploymentConfiguration:
+        MinimumHealthyPercent: 100
+        MaximumPercent: 200
+
+Outputs:
+  ALBDnsName:
+    Value: !GetAtt LoadBalancer.DNSName
+    Description: ALB DNS name — access the app at http://<this-value>
+    Export:
+      Name: !Sub clinguide-${Environment}-ALBDnsName
+  ClusterName:
+    Value: !Ref Cluster
+  APIServiceName:
+    Value: !GetAtt APIService.Name
+  UIServiceName:
+    Value: !GetAtt UIService.Name
